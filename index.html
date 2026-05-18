@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Calculadora de Peças 3D</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0f0f11;
+    --bg2: #18181c;
+    --bg3: #202026;
+    --border: #2a2a32;
+    --border2: #33333d;
+    --text: #f0f0f3;
+    --text2: #9090a0;
+    --text3: #55555f;
+    --accent: #7fff6e;
+    --accent-dim: #1a3318;
+    --accent-border: #3a6635;
+    --warn: #ffc94d;
+    --warn-bg: #1f1a0a;
+    --warn-border: #5a4a10;
+    --danger: #ff6b6b;
+    --danger-bg: #1f0f0f;
+    --danger-border: #5a2020;
+    --radius: 8px;
+    --radius-lg: 12px;
+    --mono: 'DM Mono', monospace;
+    --sans: 'DM Sans', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    min-height: 100vh;
+    line-height: 1.5;
+  }
+
+  /* Layout */
+  .shell {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 32px 20px 64px;
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 32px;
+    padding-bottom: 24px;
+    border-bottom: 0.5px solid var(--border);
+  }
+  .header-icon {
+    width: 40px; height: 40px;
+    background: var(--accent-dim);
+    border: 0.5px solid var(--accent-border);
+    border-radius: var(--radius);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+  }
+  .header-title { font-size: 18px; font-weight: 600; letter-spacing: -0.02em; }
+  .header-sub { font-size: 12px; color: var(--text2); font-family: var(--mono); margin-top: 2px; }
+
+  /* Tabs */
+  .tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 0.5px solid var(--border);
+    margin-bottom: 28px;
+  }
+  .tab {
+    padding: 9px 18px;
+    font-size: 13px;
+    font-family: var(--sans);
+    font-weight: 500;
+    cursor: pointer;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--text2);
+    margin-bottom: -1px;
+    white-space: nowrap;
+    transition: color .15s;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* Section label */
+  .sec {
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    margin: 24px 0 10px;
+  }
+
+  /* Grid rows */
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .row1 { margin-bottom: 12px; }
+
+  @media(max-width:520px) {
+    .row2, .row3 { grid-template-columns: 1fr; }
+  }
+
+  /* Field group */
+  .fg { display: flex; flex-direction: column; gap: 5px; }
+  .fg label {
+    font-size: 12px;
+    color: var(--text2);
+    font-family: var(--mono);
+  }
+  .fg label .req { color: var(--danger); margin-left: 2px; }
+  .fg input, .fg select {
+    width: 100%;
+    background: var(--bg2);
+    border: 0.5px solid var(--border2);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 8px 11px;
+    outline: none;
+    transition: border-color .15s;
+    appearance: none;
+  }
+  .fg input:focus, .fg select:focus { border-color: var(--accent-border); }
+  .fg input.error { border-color: var(--danger) !important; }
+  .fg input[readonly] { color: var(--text2); cursor: default; }
+  .fg .hint { font-size: 11px; color: var(--text3); font-family: var(--mono); }
+  .err-msg { font-size: 11px; color: var(--danger); display: none; font-family: var(--mono); }
+  .err-msg.show { display: block; }
+
+  /* Select arrow */
+  .fg select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2355555f' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 28px;
+    cursor: pointer;
+  }
+
+  /* Divider */
+  hr { border: none; border-top: 0.5px solid var(--border); margin: 24px 0; }
+
+  /* Edit banner */
+  .edit-banner {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--warn-bg);
+    border: 0.5px solid var(--warn-border);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    margin-bottom: 20px;
+    font-size: 13px;
+    color: var(--warn);
+  }
+  .edit-banner span { font-family: var(--mono); font-size: 11px; }
+  .edit-banner strong { font-weight: 600; }
+
+  /* Modelo options */
+  .modelo-options { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+  .modelo-opt {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 11px 14px;
+    border: 0.5px solid var(--border2);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+  }
+  .modelo-opt:hover { border-color: var(--border2); background: var(--bg2); }
+  .modelo-opt.selected { border-color: var(--accent-border); background: var(--accent-dim); }
+  .modelo-opt input[type=radio] { margin-top: 3px; flex-shrink: 0; accent-color: var(--accent); }
+  .modelo-opt-label { font-size: 13px; font-weight: 600; color: var(--text); }
+  .modelo-opt-desc { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .modelo-extra {
+    padding: 12px 14px;
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg3);
+    margin-bottom: 12px;
+  }
+
+  /* Slider */
+  .slider-row { display: flex; align-items: center; gap: 14px; }
+  .slider-row input[type=range] {
+    flex: 1;
+    accent-color: var(--accent);
+    height: 4px;
+    cursor: pointer;
+  }
+  .slider-label { font-family: var(--mono); font-size: 14px; font-weight: 500; color: var(--accent); min-width: 48px; }
+  .slider-desc { font-size: 12px; color: var(--text2); font-family: var(--mono); min-width: 100px; }
+
+  /* Metrics */
+  .metric-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 16px 0; }
+  @media(max-width:520px) { .metric-grid { grid-template-columns: 1fr 1fr; } }
+  .metric {
+    background: var(--bg2);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px;
+  }
+  .metric .lbl { font-size: 11px; color: var(--text3); font-family: var(--mono); margin-bottom: 6px; }
+  .metric .val { font-size: 16px; font-weight: 500; color: var(--text); font-family: var(--mono); }
+
+  /* Breakdown */
+  .breakdown {
+    border: 0.5px solid var(--border2);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin: 8px 0;
+  }
+  .brow {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 14px;
+    border-bottom: 0.5px solid var(--border);
+    font-size: 13px;
+  }
+  .brow:last-child { border-bottom: none; }
+  .brow .item { color: var(--text2); font-family: var(--mono); font-size: 12px; }
+  .brow .amount { font-family: var(--mono); color: var(--text); }
+  .brow.total { background: var(--bg2); }
+  .brow.total .item { color: var(--text); font-size: 13px; font-weight: 600; }
+  .brow.total .amount { font-size: 16px; color: var(--accent); font-weight: 600; }
+
+  /* Suggestion box */
+  .sug-box {
+    display: flex; align-items: center; gap: 16px;
+    background: var(--accent-dim);
+    border: 0.5px solid var(--accent-border);
+    border-radius: var(--radius-lg);
+    padding: 14px 18px;
+    margin-top: 10px;
+  }
+  .sug-lbl { font-size: 11px; color: var(--accent); font-family: var(--mono); letter-spacing: .05em; margin-bottom: 4px; }
+  .sug-val { font-size: 28px; font-weight: 600; color: var(--accent); font-family: var(--mono); letter-spacing: -0.02em; }
+  .sug-icon { font-size: 28px; opacity: .4; margin-left: auto; }
+
+  /* Buttons */
+  .btn-row { display: flex; gap: 10px; margin-top: 20px; }
+  .save-btn {
+    flex: 1;
+    padding: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: var(--sans);
+    background: var(--accent);
+    color: #0a1a08;
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    letter-spacing: .01em;
+    transition: opacity .15s;
+  }
+  .save-btn:hover { opacity: .88; }
+  .cancel-btn {
+    padding: 12px 18px;
+    font-size: 14px;
+    font-weight: 500;
+    font-family: var(--sans);
+    background: none;
+    color: var(--text2);
+    border: 0.5px solid var(--border2);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: color .15s, border-color .15s;
+  }
+  .cancel-btn:hover { color: var(--text); border-color: var(--text2); }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: var(--bg2);
+    border: 0.5px solid var(--accent-border);
+    color: var(--accent);
+    border-radius: var(--radius);
+    padding: 10px 22px;
+    font-size: 13px;
+    font-family: var(--mono);
+    font-weight: 500;
+    z-index: 9999;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .25s;
+    white-space: nowrap;
+  }
+  .toast.show { opacity: 1; }
+  .toast.err { border-color: var(--danger-border); color: var(--danger); }
+
+  /* Filaments list */
+  .fil-list {
+    border: 0.5px solid var(--border2);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+  .fil-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 12px;
+    border-bottom: 0.5px solid var(--border);
+    font-size: 13px;
+  }
+  .fil-item:last-child { border-bottom: none; }
+  .fil-item.editing { background: var(--bg3); flex-wrap: wrap; gap: 8px; }
+  .fil-name { flex: 1; font-weight: 500; color: var(--text); }
+  .fil-preco { font-family: var(--mono); font-size: 12px; color: var(--text2); min-width: 95px; text-align: right; }
+  .icon-btn {
+    background: none; border: none; cursor: pointer;
+    padding: 5px 6px;
+    color: var(--text3);
+    font-size: 16px;
+    border-radius: 6px;
+    line-height: 1;
+    transition: background .15s, color .15s;
+  }
+  .icon-btn:hover { background: var(--bg3); color: var(--text2); }
+  .icon-btn.danger:hover { background: var(--danger-bg); color: var(--danger); }
+  .icon-btn.success:hover { background: var(--accent-dim); color: var(--accent); }
+  .edit-inputs { display: flex; gap: 8px; flex: 1; align-items: center; }
+  .edit-inputs input { flex: 1; }
+  .add-row { display: flex; gap: 10px; align-items: flex-end; }
+  .add-row .fg { flex: 1; }
+  .add-row button {
+    padding: 8px 14px;
+    background: var(--bg3);
+    border: 0.5px solid var(--border2);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 13px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color .15s;
+  }
+  .add-row button:hover { border-color: var(--accent-border); color: var(--accent); }
+
+  /* Saved parts table */
+  .table-wrap {
+    border: 0.5px solid var(--border2);
+    border-radius: var(--radius);
+    overflow: hidden;
+    overflow-x: auto;
+    margin-top: 8px;
+  }
+  .vendidos-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    min-width: 560px;
+  }
+  .vendidos-table th {
+    text-align: left;
+    padding: 9px 12px;
+    background: var(--bg3);
+    color: var(--text3);
+    font-family: var(--mono);
+    font-weight: 500;
+    font-size: 11px;
+    border-bottom: 0.5px solid var(--border2);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    white-space: nowrap;
+  }
+  .vendidos-table td {
+    padding: 10px 12px;
+    border-bottom: 0.5px solid var(--border);
+    color: var(--text);
+    vertical-align: middle;
+    font-family: var(--mono);
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .vendidos-table tr:last-child td { border-bottom: none; }
+  .vendidos-table tbody tr:hover td { background: var(--bg2); }
+  .badge-sug { font-weight: 600; color: var(--accent); }
+  .actions-cell { display: flex; gap: 4px; }
+  .nome-cell { font-family: var(--sans); font-size: 13px; font-weight: 500; color: var(--text); }
+
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text3);
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.8;
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="header">
+    <div class="header-icon">🖨️</div>
+    <div>
+      <div class="header-title">Calculadora de Peças 3D</div>
+      <div class="header-sub">precificação · filamentos · histórico</div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('calc')">Calculadora</button>
+    <button class="tab" onclick="switchTab('fils')">Filamentos</button>
+    <button class="tab" onclick="switchTab('vendidos')">Peças salvas</button>
+  </div>
+
+  <!-- ===== FILAMENTOS ===== -->
+  <div id="panel-fils" class="panel">
+    <div class="sec">Meus filamentos</div>
+    <div class="fil-list" id="filList"></div>
+    <div class="sec">Adicionar filamento</div>
+    <div class="add-row">
+      <div class="fg"><label>Nome</label><input type="text" id="novoNome" placeholder=""/></div>
+      <div class="fg" style="max-width:155px"><label>Preço por kg (R$)</label><input type="number" id="novoPreco" placeholder="" step="0.01" min="0"/></div>
+      <button onclick="addFilamento()">+ Adicionar</button>
+    </div>
+  </div>
+
+  <!-- ===== CALCULADORA ===== -->
+  <div id="panel-calc" class="panel active">
+
+    <div id="editBanner" class="edit-banner" style="display:none">
+      <span>✏️</span>
+      <div>Editando: <strong id="editBannerNome"></strong></div>
+    </div>
+
+    <div class="sec">Peça</div>
+    <div class="row1">
+      <div class="fg">
+        <label>Nome da peça <span class="req">*</span></label>
+        <input type="text" id="nomePeca" placeholder="" oninput="clearErr('nomePeca')"/>
+        <span class="err-msg" id="err-nomePeca">Preencha o nome da peça antes de salvar.</span>
+      </div>
+    </div>
+
+    <div class="sec">Filamento</div>
+    <div class="row2">
+      <div class="fg">
+        <label>Filamento <span class="req">*</span></label>
+        <select id="filSelect" onchange="updateFilDisplay()"></select>
+      </div>
+      <div class="fg">
+        <label>Preço por kg</label>
+        <input type="text" id="filPrecoDisplay" readonly/>
+      </div>
+    </div>
+    <div class="row2">
+      <div class="fg">
+        <label>Peso da peça (g) <span class="req">*</span></label>
+        <input type="number" id="peso" placeholder="" step="0.01" min="0" oninput="clearErr('peso');calc()"/>
+        <span class="err-msg" id="err-peso">Informe o peso da peça.</span>
+      </div>
+      <div class="fg">
+        <label>Tempo de impressão <span class="req">*</span></label>
+        <input type="text" id="tempoImpressao" placeholder="" oninput="clearErr('tempoImpressao');calc()"/>
+        <span class="hint">Formato HH:MM — igual ao fatiador</span>
+        <span class="err-msg" id="err-tempoImpressao">Informe o tempo de impressão.</span>
+      </div>
+    </div>
+
+    <div class="sec">Tipo de modelo</div>
+    <div class="modelo-options">
+      <label class="modelo-opt selected" id="opt-gratis">
+        <input type="radio" name="modelo" value="gratis" checked/>
+        <div>
+          <div class="modelo-opt-label">Gratuito</div>
+          <div class="modelo-opt-desc">Modelo baixado de graça — não soma nada ao custo</div>
+        </div>
+      </label>
+      <label class="modelo-opt" id="opt-pago">
+        <input type="radio" name="modelo" value="pago"/>
+        <div>
+          <div class="modelo-opt-label">Modelo pago</div>
+          <div class="modelo-opt-desc">Modelo comprado — informe quanto pagou</div>
+        </div>
+      </label>
+      <label class="modelo-opt" id="opt-personalizado">
+        <input type="radio" name="modelo" value="personalizado"/>
+        <div>
+          <div class="modelo-opt-label">Personalizado</div>
+          <div class="modelo-opt-desc">Você criou o modelo — informe o tempo e sua hora de trabalho</div>
+        </div>
+      </label>
+    </div>
+    <div id="extra-pago" class="modelo-extra" style="display:none">
+      <div class="fg"><label>Quanto pagou pelo modelo (R$)</label><input type="number" id="modeloPago" placeholder="0.00" step="0.01" min="0" oninput="calc()"/></div>
+    </div>
+    <div id="extra-personalizado" class="modelo-extra" style="display:none">
+      <div class="row2" style="margin-bottom:10px">
+        <div class="fg">
+          <label>Tempo de projeto</label>
+          <input type="text" id="tempoProjeto" placeholder="2:30" oninput="calc()"/>
+          <span class="hint">Formato HH:MM</span>
+        </div>
+        <div class="fg">
+          <label>Valor da sua hora (R$/h)</label>
+          <input type="number" id="valorHora" placeholder="20.00" step="0.5" min="0" value="20" oninput="calc()"/>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">Impressora</div>
+    <div class="row3">
+      <div class="fg"><label>Preço kWh (R$)</label><input type="number" id="kwh" value="1.1" step="0.01" min="0" oninput="calc()"/></div>
+      <div class="fg"><label>Consumo (W)</label><input type="number" id="watts" value="300" step="10" min="0" oninput="calc()"/></div>
+      <div class="fg"><label>Depreciação (R$/h)</label><input type="number" id="depreciacao" value="1.5" step="0.01" min="0" oninput="calc()"/></div>
+    </div>
+    <div class="row1">
+      <div class="fg"><label>Manutenção (R$/h)</label><input type="number" id="manutencao" value="0.8" step="0.01" min="0" oninput="calc()"/></div>
+    </div>
+
+    <div class="sec">Margem de lucro</div>
+    <div class="slider-row">
+      <input type="range" id="lucroSlider" min="0" max="3" step="0.05" value="1" oninput="updateLucro()"/>
+      <span class="slider-label" id="lucroLabel">×1,00</span>
+      <span class="slider-desc" id="lucroDesc">100% de lucro</span>
+    </div>
+
+    <hr/>
+
+    <div class="metric-grid">
+      <div class="metric"><div class="lbl">filamento</div><div class="val" id="rFil">R$ 0,00</div></div>
+      <div class="metric"><div class="lbl">energia</div><div class="val" id="rEn">R$ 0,00</div></div>
+      <div class="metric"><div class="lbl">manutenção</div><div class="val" id="rMan">R$ 0,00</div></div>
+      <div class="metric"><div class="lbl">modelo</div><div class="val" id="rMod">R$ 0,00</div></div>
+    </div>
+
+    <div class="breakdown">
+      <div class="brow"><span class="item">custo_total</span><span class="amount" id="bCusto">R$ 0,00</span></div>
+      <div class="brow"><span class="item">lucro</span><span class="amount" id="bLucro">R$ 0,00</span></div>
+      <div class="brow total"><span class="item">preço_de_venda</span><span class="amount" id="bVenda">R$ 0,00</span></div>
+    </div>
+
+    <div class="sug-box">
+      <div>
+        <div class="sug-lbl">sugestão_arredondada</div>
+        <div class="sug-val" id="bSug">R$ 0</div>
+      </div>
+      <div class="sug-icon">🏷️</div>
+    </div>
+
+    <div class="btn-row">
+      <button class="cancel-btn" id="cancelEditBtn" style="display:none" onclick="cancelEdit()">✕ Cancelar edição</button>
+      <button class="save-btn" id="saveBtn" onclick="salvarPeca()">💾 Salvar</button>
+    </div>
+  </div>
+
+  <!-- ===== PEÇAS SALVAS ===== -->
+  <div id="panel-vendidos" class="panel">
+    <div class="sec">Peças salvas</div>
+    <div id="vendidosContent"></div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const fmt = v => 'R$ ' + v.toFixed(2).replace('.',',');
+
+let filamentos = JSON.parse(localStorage.getItem('fils3d')||'null') || [
+  {nome:'PLA Cinza',preco:89.33},
+  {nome:'ABS Branco',preco:69.17}
+];
+let pecas = JSON.parse(localStorage.getItem('pecas3d')||'[]');
+let editingFilIdx = null;
+let editingPecaIdx = null;
+
+function save(){
+  localStorage.setItem('fils3d', JSON.stringify(filamentos));
+  localStorage.setItem('pecas3d', JSON.stringify(pecas));
+}
+
+function parseHHMM(str){
+  if(!str)return 0;
+  str=str.trim().replace(',',':').replace(/h/i,':');
+  const p=str.split(':');
+  if(p.length===2)return(parseFloat(p[0])||0)*60+(parseFloat(p[1])||0);
+  return(parseFloat(str)||0)*60;
+}
+
+function showToast(msg,isErr=false){
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.className='toast'+(isErr?' err':'');
+  void t.offsetWidth;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+function clearErr(id){
+  document.getElementById(id)?.classList.remove('error');
+  document.getElementById('err-'+id)?.classList.remove('show');
+}
+
+function validate(){
+  let ok=true;
+  if(!document.getElementById('nomePeca').value.trim()){
+    document.getElementById('nomePeca').classList.add('error');
+    document.getElementById('err-nomePeca').classList.add('show');
+    ok=false;
+  }
+  const peso=document.getElementById('peso').value;
+  if(!peso||parseFloat(peso)<=0){
+    document.getElementById('peso').classList.add('error');
+    document.getElementById('err-peso').classList.add('show');
+    ok=false;
+  }
+  if(!document.getElementById('tempoImpressao').value.trim()){
+    document.getElementById('tempoImpressao').classList.add('error');
+    document.getElementById('err-tempoImpressao').classList.add('show');
+    ok=false;
+  }
+  if(!ok)showToast('Preencha os campos obrigatórios!',true);
+  return ok;
+}
+
+function getCalcState(){
+  const filIdx=parseInt(document.getElementById('filSelect').value);
+  const tipo=document.querySelector('input[name=modelo]:checked').value;
+  return{
+    nome:document.getElementById('nomePeca').value.trim(),
+    filIdx,
+    peso:document.getElementById('peso').value,
+    tempo:document.getElementById('tempoImpressao').value.trim(),
+    modeloTipo:tipo,
+    modeloPago:document.getElementById('modeloPago').value,
+    tempoProjeto:document.getElementById('tempoProjeto').value,
+    valorHora:document.getElementById('valorHora').value,
+    kwh:document.getElementById('kwh').value,
+    watts:document.getElementById('watts').value,
+    depreciacao:document.getElementById('depreciacao').value,
+    manutencao:document.getElementById('manutencao').value,
+    lucro:document.getElementById('lucroSlider').value,
+  };
+}
+
+function loadCalcState(s){
+  document.getElementById('nomePeca').value=s.nome||'';
+  const sel=document.getElementById('filSelect');
+  if(s.filIdx!==undefined&&sel.querySelector(`option[value="${s.filIdx}"]`))sel.value=s.filIdx;
+  updateFilDisplay();
+  document.getElementById('peso').value=s.peso||'';
+  document.getElementById('tempoImpressao').value=s.tempo||'';
+  const radio=document.querySelector(`input[name=modelo][value="${s.modeloTipo||'gratis'}"]`);
+  if(radio){
+    radio.checked=true;
+    document.querySelectorAll('.modelo-opt').forEach(el=>el.classList.remove('selected'));
+    radio.closest('.modelo-opt').classList.add('selected');
+  }
+  document.getElementById('extra-pago').style.display=s.modeloTipo==='pago'?'block':'none';
+  document.getElementById('extra-personalizado').style.display=s.modeloTipo==='personalizado'?'block':'none';
+  document.getElementById('modeloPago').value=s.modeloPago||'';
+  document.getElementById('tempoProjeto').value=s.tempoProjeto||'';
+  document.getElementById('valorHora').value=s.valorHora||'20';
+  document.getElementById('kwh').value=s.kwh||'1.1';
+  document.getElementById('watts').value=s.watts||'300';
+  document.getElementById('depreciacao').value=s.depreciacao||'1.5';
+  document.getElementById('manutencao').value=s.manutencao||'0.8';
+  const lucro=parseFloat(s.lucro)||1;
+  document.getElementById('lucroSlider').value=lucro;
+  document.getElementById('lucroLabel').textContent='×'+lucro.toFixed(2).replace('.',',');
+  document.getElementById('lucroDesc').textContent=Math.round(lucro*100)+'% de lucro';
+  calc();
+}
+
+function parseRVal(str){
+  return parseFloat(str.replace('R$ ','').replace(',','.'))||0;
+}
+
+function salvarPeca(){
+  if(!validate())return;
+  const state=getCalcState();
+  const custo=parseRVal(document.getElementById('bCusto').textContent);
+  const venda=parseRVal(document.getElementById('bVenda').textContent);
+  const sug=parseInt(document.getElementById('bSug').textContent.replace('R$ ',''));
+  const peca={...state,custo,venda,sug};
+  if(editingPecaIdx!==null){
+    pecas[editingPecaIdx]=peca;
+    showToast('✓ "'+peca.nome+'" atualizada!');
+  } else {
+    pecas.push(peca);
+    showToast('✓ "'+peca.nome+'" salva!');
+  }
+  save();
+  renderVendidos();
+  resetCalc();
+}
+
+function resetCalc(){
+  editingPecaIdx=null;
+  document.getElementById('editBanner').style.display='none';
+  document.getElementById('cancelEditBtn').style.display='none';
+  document.getElementById('saveBtn').textContent='💾 Salvar';
+  document.getElementById('nomePeca').value='';
+  document.getElementById('peso').value='';
+  document.getElementById('tempoImpressao').value='';
+  document.getElementById('modeloPago').value='';
+  document.getElementById('tempoProjeto').value='';
+  document.getElementById('valorHora').value='20';
+  document.getElementById('extra-pago').style.display='none';
+  document.getElementById('extra-personalizado').style.display='none';
+  const gratis=document.querySelector('input[name=modelo][value="gratis"]');
+  gratis.checked=true;
+  document.querySelectorAll('.modelo-opt').forEach(el=>el.classList.remove('selected'));
+  gratis.closest('.modelo-opt').classList.add('selected');
+  document.getElementById('lucroSlider').value=1;
+  document.getElementById('lucroLabel').textContent='×1,00';
+  document.getElementById('lucroDesc').textContent='100% de lucro';
+  ['nomePeca','peso','tempoImpressao'].forEach(clearErr);
+  calc();
+}
+
+function cancelEdit(){resetCalc();showToast('Edição cancelada.');}
+
+function editarPeca(i){
+  editingPecaIdx=i;
+  const p=pecas[i];
+  loadCalcState(p);
+  document.getElementById('editBanner').style.display='flex';
+  document.getElementById('editBannerNome').textContent=p.nome;
+  document.getElementById('cancelEditBtn').style.display='block';
+  document.getElementById('saveBtn').textContent='💾 Salvar alterações';
+  switchTab('calc');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function deletePeca(i){
+  const nome=pecas[i].nome;
+  pecas.splice(i,1);
+  if(editingPecaIdx===i)resetCalc();
+  else if(editingPecaIdx!==null&&editingPecaIdx>i)editingPecaIdx--;
+  save();
+  renderVendidos();
+  showToast('"'+nome+'" removida.');
+}
+
+function renderVendidos(){
+  const el=document.getElementById('vendidosContent');
+  if(!pecas.length){
+    el.innerHTML='<div class="empty-state">Nenhuma peça salva ainda.<br>Configure uma peça na calculadora e clique em Salvar.</div>';
+    return;
+  }
+  el.innerHTML=`<div class="table-wrap"><table class="vendidos-table">
+    <thead><tr>
+      <th>Peça</th><th>Peso</th><th>Tempo</th><th>Custo</th><th>Preço venda</th><th>Sugestão</th><th></th>
+    </tr></thead>
+    <tbody>${pecas.map((p,i)=>`<tr>
+      <td class="nome-cell">${p.nome}</td>
+      <td>${p.peso}g</td>
+      <td>${p.tempo}</td>
+      <td>${fmt(p.custo)}</td>
+      <td>${fmt(p.venda)}</td>
+      <td class="badge-sug">R$ ${p.sug}</td>
+      <td><div class="actions-cell">
+        <button class="icon-btn" onclick="editarPeca(${i})" title="Editar">✏️</button>
+        <button class="icon-btn danger" onclick="deletePeca(${i})" title="Remover">🗑️</button>
+      </div></td>
+    </tr>`).join('')}</tbody>
+  </table></div>`;
+}
+
+/* Filamentos */
+function renderFilList(){
+  const el=document.getElementById('filList');
+  if(!filamentos.length){el.innerHTML='<div class="empty-state">Nenhum filamento cadastrado.</div>';return;}
+  el.innerHTML=filamentos.map((f,i)=>{
+    if(editingFilIdx===i)return`<div class="fil-item editing">
+      <div class="edit-inputs">
+        <input type="text" id="eFN${i}" value="${f.nome}" placeholder="Nome" style="flex:2"/>
+        <input type="number" id="eFP${i}" value="${f.preco}" step="0.01" min="0" style="flex:1;max-width:120px"/>
+      </div>
+      <button class="icon-btn success" onclick="saveFilEdit(${i})">✓</button>
+      <button class="icon-btn" onclick="cancelFilEdit()">✕</button>
+    </div>`;
+    return`<div class="fil-item">
+      <span class="fil-name">${f.nome}</span>
+      <span class="fil-preco">R$ ${f.preco.toFixed(2).replace('.',',')}/kg</span>
+      <button class="icon-btn" onclick="startFilEdit(${i})" title="Editar">✏️</button>
+      <button class="icon-btn danger" onclick="delFilamento(${i})" title="Remover">🗑️</button>
+    </div>`;
+  }).join('');
+}
+function startFilEdit(i){editingFilIdx=i;renderFilList();}
+function cancelFilEdit(){editingFilIdx=null;renderFilList();}
+function saveFilEdit(i){
+  const n=document.getElementById('eFN'+i).value.trim();
+  const p=parseFloat(document.getElementById('eFP'+i).value);
+  if(!n||isNaN(p)||p<=0)return;
+  filamentos[i]={nome:n,preco:p};
+  editingFilIdx=null;
+  save();renderFilList();renderFilSelect();
+}
+function renderFilSelect(){
+  const sel=document.getElementById('filSelect');
+  const cur=parseInt(sel.value);
+  sel.innerHTML=filamentos.length
+    ?filamentos.map((f,i)=>`<option value="${i}">${f.nome}</option>`).join('')
+    :'<option value="">— sem filamentos —</option>';
+  if(!isNaN(cur)&&sel.querySelector(`option[value="${cur}"]`))sel.value=cur;
+  updateFilDisplay();
+}
+function updateFilDisplay(){
+  const idx=parseInt(document.getElementById('filSelect').value);
+  document.getElementById('filPrecoDisplay').value=(!isNaN(idx)&&filamentos[idx])
+    ?'R$ '+filamentos[idx].preco.toFixed(2).replace('.',',')+'/kg':'—';
+  calc();
+}
+function addFilamento(){
+  const n=document.getElementById('novoNome').value.trim();
+  const p=parseFloat(document.getElementById('novoPreco').value);
+  if(!n||isNaN(p)||p<=0)return;
+  filamentos.push({nome:n,preco:p});
+  document.getElementById('novoNome').value='';
+  document.getElementById('novoPreco').value='';
+  save();renderFilList();renderFilSelect();
+}
+function delFilamento(i){
+  if(editingFilIdx===i)editingFilIdx=null;
+  filamentos.splice(i,1);
+  save();renderFilList();renderFilSelect();
+}
+
+/* Cálculo */
+function getModeloCusto(){
+  const tipo=document.querySelector('input[name=modelo]:checked').value;
+  if(tipo==='gratis')return 0;
+  if(tipo==='pago')return parseFloat(document.getElementById('modeloPago').value)||0;
+  if(tipo==='personalizado'){
+    const m=parseHHMM(document.getElementById('tempoProjeto').value);
+    const vh=parseFloat(document.getElementById('valorHora').value)||0;
+    return(m/60)*vh;
+  }
+  return 0;
+}
+
+function calc(){
+  const idx=parseInt(document.getElementById('filSelect').value);
+  const filPorKg=(!isNaN(idx)&&filamentos[idx])?filamentos[idx].preco:0;
+  const peso=parseFloat(document.getElementById('peso').value)||0;
+  const totalMin=parseHHMM(document.getElementById('tempoImpressao').value);
+  const kwh=parseFloat(document.getElementById('kwh').value)||0;
+  const watts=parseFloat(document.getElementById('watts').value)||0;
+  const dep=parseFloat(document.getElementById('depreciacao').value)||0;
+  const man=parseFloat(document.getElementById('manutencao').value)||0;
+  const lucro=parseFloat(document.getElementById('lucroSlider').value)||0;
+  const cFil=(filPorKg/1000)*peso;
+  const cEn=(watts/1000/60)*kwh*totalMin;
+  const cMan=((dep+man)/60)*totalMin;
+  const cMod=getModeloCusto();
+  const total=cFil+cEn+cMan+cMod;
+  const venda=total*(1+lucro);
+  document.getElementById('rFil').textContent=fmt(cFil);
+  document.getElementById('rEn').textContent=fmt(cEn);
+  document.getElementById('rMan').textContent=fmt(cMan);
+  document.getElementById('rMod').textContent=fmt(cMod);
+  document.getElementById('bCusto').textContent=fmt(total);
+  document.getElementById('bLucro').textContent=fmt(total*lucro);
+  document.getElementById('bVenda').textContent=fmt(venda);
+  document.getElementById('bSug').textContent='R$ '+Math.ceil(venda);
+}
+
+function updateLucro(){
+  const v=parseFloat(document.getElementById('lucroSlider').value);
+  document.getElementById('lucroLabel').textContent='×'+v.toFixed(2).replace('.',',');
+  document.getElementById('lucroDesc').textContent=Math.round(v*100)+'% de lucro';
+  calc();
+}
+
+function switchTab(t){
+  document.querySelectorAll('.tab').forEach((el,i)=>{
+    el.classList.toggle('active',(i===0&&t==='calc')||(i===1&&t==='fils')||(i===2&&t==='vendidos'));
+  });
+  ['calc','fils','vendidos'].forEach(id=>{
+    document.getElementById('panel-'+id).classList.toggle('active',id===t);
+  });
+}
+
+document.querySelectorAll('input[name=modelo]').forEach(r=>{
+  r.addEventListener('change',function(){
+    document.querySelectorAll('.modelo-opt').forEach(el=>el.classList.remove('selected'));
+    this.closest('.modelo-opt').classList.add('selected');
+    document.getElementById('extra-pago').style.display=this.value==='pago'?'block':'none';
+    document.getElementById('extra-personalizado').style.display=this.value==='personalizado'?'block':'none';
+    calc();
+  });
+});
+
+renderFilList();renderFilSelect();renderVendidos();calc();
+</script>
+</body>
+</html>
